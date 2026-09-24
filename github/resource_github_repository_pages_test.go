@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/google/go-github/v92/github"
 	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -16,7 +17,11 @@ import (
 )
 
 func TestAccGithubRepositoryPages(t *testing.T) {
+	t.Parallel()
+
 	t.Run("creates_pages_with_legacy_build_type", func(t *testing.T) {
+		t.Parallel()
+
 		randomID := acctest.RandString(5)
 		repoName := fmt.Sprintf("%spages-%s", testResourcePrefix, randomID)
 
@@ -38,7 +43,7 @@ func TestAccGithubRepositoryPages(t *testing.T) {
 			}
 		`, repoName, testAccConf.testRepositoryVisibility)
 
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:          func() { skipUnauthenticated(t) },
 			ProviderFactories: providerFactories,
 			Steps: []resource.TestStep{
@@ -56,6 +61,8 @@ func TestAccGithubRepositoryPages(t *testing.T) {
 	})
 
 	t.Run("creates_pages_with_workflow_build_type", func(t *testing.T) {
+		t.Parallel()
+
 		randomID := acctest.RandString(5)
 		repoName := fmt.Sprintf("%spages-%s", testResourcePrefix, randomID)
 
@@ -73,7 +80,7 @@ func TestAccGithubRepositoryPages(t *testing.T) {
 			}
 		`, repoName, testAccConf.testRepositoryVisibility)
 
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:          func() { skipUnauthenticated(t) },
 			ProviderFactories: providerFactories,
 			Steps: []resource.TestStep{
@@ -88,6 +95,8 @@ func TestAccGithubRepositoryPages(t *testing.T) {
 	})
 
 	t.Run("updates_pages_configuration", func(t *testing.T) {
+		t.Parallel()
+
 		randomID := acctest.RandString(5)
 		repoName := fmt.Sprintf("%spages-%s", testResourcePrefix, randomID)
 
@@ -112,7 +121,7 @@ source {
 			}
 		`
 
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:          func() { skipUnauthenticated(t) },
 			ProviderFactories: providerFactories,
 			Steps: []resource.TestStep{
@@ -133,6 +142,8 @@ source {
 	})
 
 	t.Run("creates_pages_with_private_visibility", func(t *testing.T) {
+		t.Parallel()
+
 		randomID := acctest.RandString(5)
 		repoName := fmt.Sprintf("%spages-%s", testResourcePrefix, randomID)
 
@@ -147,12 +158,12 @@ source {
 			resource "github_repository_pages" "test" {
 				repository = github_repository.test.name
 				build_type = "workflow"
-				
+
 				public = false
 			}
 		`
 
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck: func() {
 				skipUnlessEnterprise(t)
 			},
@@ -168,6 +179,8 @@ source {
 		})
 	})
 	t.Run("updates_pages_visibility", func(t *testing.T) {
+		t.Parallel()
+
 		randomID := acctest.RandString(5)
 		repoName := fmt.Sprintf("%spages-%s", testResourcePrefix, randomID)
 
@@ -182,14 +195,14 @@ source {
 			resource "github_repository_pages" "test" {
 				repository = github_repository.test.name
 				build_type = "workflow"
-				
+
 				public = %t
 			}
 		`
 
 		publicValuesDiffer := statecheck.CompareValue(compare.ValuesDiffer())
 
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck: func() {
 				skipUnlessEnterprise(t)
 				if os.Getenv("GH_TEST_ENTERPRISE_IS_EMU") == "true" {
@@ -215,6 +228,8 @@ source {
 	})
 
 	t.Run("errors_when_https_enforced_without_cname", func(t *testing.T) {
+		t.Parallel()
+
 		randomID := acctest.RandString(5)
 		repoName := fmt.Sprintf("%spages-%s", testResourcePrefix, randomID)
 
@@ -232,7 +247,7 @@ source {
 			}
 		`, repoName, testAccConf.testRepositoryVisibility)
 
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:          func() { skipUnauthenticated(t) },
 			ProviderFactories: providerFactories,
 			Steps: []resource.TestStep{
@@ -245,6 +260,8 @@ source {
 	})
 
 	t.Run("validates_that_source_is_not_set_for_workflow_build_type", func(t *testing.T) {
+		t.Parallel()
+
 		randomID := acctest.RandString(5)
 		repoName := fmt.Sprintf("%spages-%s", testResourcePrefix, randomID)
 
@@ -265,7 +282,7 @@ source {
 			}
 		`, repoName, testAccConf.testRepositoryVisibility)
 
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:          func() { skipUnauthenticated(t) },
 			ProviderFactories: providerFactories,
 			Steps: []resource.TestStep{
@@ -283,6 +300,8 @@ source {
 	})
 
 	t.Run("validates_that_source_is_set_for_legacy_build_type", func(t *testing.T) {
+		t.Parallel()
+
 		randomID := acctest.RandString(5)
 		repoName := fmt.Sprintf("%spages-%s", testResourcePrefix, randomID)
 
@@ -299,7 +318,7 @@ source {
 			}
 		`, repoName, testAccConf.testRepositoryVisibility)
 
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:          func() { skipUnauthenticated(t) },
 			ProviderFactories: providerFactories,
 			Steps: []resource.TestStep{
@@ -317,6 +336,8 @@ source {
 	})
 
 	t.Run("imports_pages_configuration", func(t *testing.T) {
+		t.Parallel()
+
 		randomID := acctest.RandString(5)
 		repoName := fmt.Sprintf("%spages-%s", testResourcePrefix, randomID)
 
@@ -338,7 +359,7 @@ source {
 			}
 		`, repoName, testAccConf.testRepositoryVisibility)
 
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:          func() { skipUnauthenticated(t) },
 			ProviderFactories: providerFactories,
 			Steps: []resource.TestStep{
@@ -352,6 +373,48 @@ source {
 					ResourceName:  "github_repository_pages.test",
 					ImportState:   true,
 					ImportStateId: repoName,
+				},
+			},
+		})
+	})
+
+	t.Run("adopts_existing_pages", func(t *testing.T) {
+		t.Parallel()
+		skipUnauthenticated(t)
+
+		repo := mustCreateTestRepository(t, func(r *github.Repository) {
+			r.Visibility = new(testAccConf.testRepositoryVisibility)
+		})
+		if _, _, err := testAccConf.meta.v3client.Repositories.EnablePages(t.Context(), testAccConf.meta.name, repo.GetName(), &github.Pages{BuildType: new("workflow")}); err != nil {
+			t.Fatalf("failed to enable pages on test repository %s: %v", repo.GetName(), err)
+		}
+
+		config := fmt.Sprintf(`
+			resource "github_repository_pages" "test" {
+				repository = "%s"
+				build_type = "legacy"
+				source {
+					branch = "main"
+					path   = "/"
+				}
+			}
+		`, repo.GetName())
+
+		resource.Test(t, resource.TestCase{
+			ProviderFactories: providerFactories,
+			Steps: []resource.TestStep{
+				{
+					Config: config,
+					ConfigPlanChecks: resource.ConfigPlanChecks{
+						PreApply: []plancheck.PlanCheck{
+							plancheck.ExpectResourceAction("github_repository_pages.test", plancheck.ResourceActionCreate),
+						},
+					},
+					ConfigStateChecks: []statecheck.StateCheck{
+						statecheck.ExpectKnownValue("github_repository_pages.test", tfjsonpath.New("repository_id"), knownvalue.Int64Exact(repo.GetID())),
+						statecheck.ExpectKnownValue("github_repository_pages.test", tfjsonpath.New("build_type"), knownvalue.StringExact("legacy")),
+						statecheck.ExpectKnownValue("github_repository_pages.test", tfjsonpath.New("source").AtSliceIndex(0).AtMapKey("branch"), knownvalue.StringExact("main")),
+					},
 				},
 			},
 		})
