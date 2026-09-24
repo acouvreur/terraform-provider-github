@@ -2,14 +2,13 @@ package github
 
 import (
 	"context"
-	"fmt"
-	"log"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
-func resourceGithubActionsRepositoryOIDCSubjectClaimCustomizationTemplateV0() *schema.Resource {
+func resourceGithubActionsRepositoryOIDCSubjectClaimCustomizationTemplateResourceV0() *schema.Resource {
 	return &schema.Resource{
 		Schema: map[string]*schema.Schema{
 			"repository": {
@@ -36,26 +35,18 @@ func resourceGithubActionsRepositoryOIDCSubjectClaimCustomizationTemplateV0() *s
 	}
 }
 
-func resourceGithubActionsRepositoryOIDCSubjectClaimCustomizationTemplateStateUpgradeV0(ctx context.Context, rawState map[string]any, m any) (map[string]any, error) {
-	meta := m.(*Owner)
+func resourceGithubActionsRepositoryOIDCSubjectClaimCustomizationTemplateInstanceStateUpgradeV0(ctx context.Context, rawState map[string]any, m any) (map[string]any, error) {
+	tflog.Debug(ctx, "Migrating repository OIDC subject claim customization template from v0 to v1.", rawState)
+
+	meta, _ := m.(*Owner)
 	client := meta.v3client
 	owner := meta.name
 
-	log.Printf("[DEBUG] OIDC Subject Claim Customization Template state before migration: %#v", rawState)
-
-	repoName, ok := rawState["repository"].(string)
-	if !ok {
-		return nil, fmt.Errorf("repository not found or is not a string")
-	}
-
-	repo, _, err := client.Repositories.Get(ctx, owner, repoName)
+	migratedState, err := migrateRepositoryWithID(ctx, client, owner, rawState)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve repository %s: %w", repoName, err)
+		return nil, err
 	}
 
-	rawState["repository_id"] = int(repo.GetID())
-
-	log.Printf("[DEBUG] OIDC Subject Claim Customization Template state after migration: %#v", rawState)
-
-	return rawState, nil
+	tflog.Debug(ctx, "Migrated repository OIDC subject claim customization template to v1.", migratedState)
+	return migratedState, nil
 }
