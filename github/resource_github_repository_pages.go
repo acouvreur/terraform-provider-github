@@ -2,12 +2,13 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/google/go-github/v85/github"
+	"github.com/google/go-github/v92/github"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
@@ -118,7 +119,7 @@ func resourceGithubRepositoryPages() *schema.Resource {
 
 func resourceGithubRepositoryPagesCreate(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	tflog.Debug(ctx, "Creating GitHub Pages")
-	meta := m.(*Owner)
+	meta, _ := m.(*Owner)
 	client := meta.v3client
 
 	owner := meta.name // TODO: Add owner support // d.Get("owner").(string)
@@ -152,9 +153,20 @@ func resourceGithubRepositoryPagesCreate(ctx context.Context, d *schema.Resource
 		}
 	}
 
+	adopted := false
 	pages, _, err := client.Repositories.EnablePages(ctx, owner, repoName, pagesReq)
 	if err != nil {
-		return diag.FromErr(err)
+		ghErr, ok := errors.AsType[*github.ErrorResponse](err)
+		if !ok || ghErr.Response.StatusCode != http.StatusConflict {
+			return diag.FromErr(err)
+		}
+
+		tflog.Info(ctx, "GitHub Pages is already enabled, adopting the existing site", map[string]any{"owner": owner, "repository": repoName})
+		pages, _, err = client.Repositories.GetPagesInfo(ctx, owner, repoName)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		adopted = true
 	}
 
 	repo, _, err := client.Repositories.Get(ctx, owner, repoName)
@@ -168,11 +180,13 @@ func resourceGithubRepositoryPagesCreate(ctx context.Context, d *schema.Resource
 		return diag.FromErr(err)
 	}
 
-	if err := d.Set("build_type", pages.GetBuildType()); err != nil {
-		return diag.FromErr(err)
-	}
-	if err := d.Set("cname", pages.GetCNAME()); err != nil {
-		return diag.FromErr(err)
+	if !adopted {
+		if err := d.Set("build_type", pages.GetBuildType()); err != nil {
+			return diag.FromErr(err)
+		}
+		if err := d.Set("cname", pages.GetCNAME()); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 	if err := d.Set("custom_404", pages.GetCustom404()); err != nil {
 		return diag.FromErr(err)
@@ -202,8 +216,19 @@ func resourceGithubRepositoryPagesCreate(ctx context.Context, d *schema.Resource
 		"cname_ok":              cnameOK,
 	})
 
-	if cnameOK || publicOKExists || httpsEnforcedExists {
+	if adopted || cnameOK || publicOKExists || httpsEnforcedExists {
 		update := &github.PagesUpdate{}
+
+		// The existing site can have a different build type or source, so send the configured values.
+		if adopted {
+			update.BuildType = new(buildType)
+			if buildType == "legacy" {
+				update.Source = &github.PagesSource{
+					Branch: pagesReq.Source.Branch,
+					Path:   new(d.Get("source.0.path").(string)),
+				}
+			}
+		}
 
 		if cnameOK {
 			update.CNAME = new(cname.(string))
@@ -237,7 +262,7 @@ func resourceGithubRepositoryPagesCreate(ctx context.Context, d *schema.Resource
 }
 
 func resourceGithubRepositoryPagesRead(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
-	meta := m.(*Owner)
+	meta, _ := m.(*Owner)
 	client := meta.v3client
 
 	owner := meta.name // TODO: Add owner support // d.Get("owner").(string)
@@ -308,7 +333,7 @@ func resourceGithubRepositoryPagesRead(ctx context.Context, d *schema.ResourceDa
 
 func resourceGithubRepositoryPagesUpdate(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	tflog.Debug(ctx, "Updating GitHub Pages")
-	meta := m.(*Owner)
+	meta, _ := m.(*Owner)
 	client := meta.v3client
 
 	owner := meta.name // TODO: Add owner support // d.Get("owner").(string)
@@ -364,7 +389,7 @@ func resourceGithubRepositoryPagesUpdate(ctx context.Context, d *schema.Resource
 
 func resourceGithubRepositoryPagesDelete(ctx context.Context, d *schema.ResourceData, m any) diag.Diagnostics {
 	tflog.Debug(ctx, "Deleting GitHub Pages")
-	meta := m.(*Owner)
+	meta, _ := m.(*Owner)
 	client := meta.v3client
 
 	owner := meta.name // TODO: Add owner support // d.Get("owner").(string)
@@ -384,7 +409,7 @@ func resourceGithubRepositoryPagesImport(ctx context.Context, d *schema.Resource
 		return nil, fmt.Errorf("invalid ID specified: supplied ID must be the slug of the repository name")
 	}
 
-	meta := m.(*Owner)
+	meta, _ := m.(*Owner)
 	owner := meta.name
 	client := meta.v3client
 
